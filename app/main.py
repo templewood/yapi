@@ -2,14 +2,17 @@ from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from pydantic import ValidationError
+from pydantic import ValidationError, PositiveInt
 
 from exceptions import CouriersLoadException, OrdersLoadException
-from schemas.couriers import CouriersPostRequest, CourierItem
+from schemas.couriers import CouriersPostRequest, CourierItem, CourierUpdateRequest
 from schemas.orders import OrdersPostRequest, OrderItem
 
+from db.couriers import save_posted_couriers, update_courier
+from db.orders import save_posted_orders
 
 app = FastAPI()
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
@@ -29,6 +32,7 @@ async def validation_exception_handler(request, exc):
         content=details
     )
 
+
 @app.exception_handler(CouriersLoadException)
 def couriers_load_exception_handler(request, exc: CouriersLoadException):
     ids = list([{"id": x} for x in exc.ids])
@@ -40,6 +44,7 @@ def couriers_load_exception_handler(request, exc: CouriersLoadException):
         content=details
     )
 
+
 @app.exception_handler(OrdersLoadException)
 def orders_load_exception_handler(request, exc: OrdersLoadException):
     ids = list([{"id": x} for x in exc.ids])
@@ -50,6 +55,7 @@ def orders_load_exception_handler(request, exc: OrdersLoadException):
         status_code=400,
         content=details
     )
+
 
 # 1: POST /couriers
 @app.post("/couriers")
@@ -67,7 +73,21 @@ def route_post_couriers(request_body: CouriersPostRequest):
 
     if couriers_bad:
         raise CouriersLoadException(couriers_bad)
-    return request_body # FIXME
+    inserted_ids = save_posted_couriers(couriers_good)
+    details = { "couriers": list([{"id": x} for x in inserted_ids]) }
+    return JSONResponse(
+        status_code=201,
+        content=details
+    )
+
+
+# 2: PATCH /couriers/$courier_id
+@app.patch("/couriers/{courier_id}")
+def route_patch_courier(courier_id: PositiveInt, courier_info: CourierUpdateRequest):
+    result = update_courier(courier_id, courier_info.dict(exclude_unset=True))
+    if not result:
+        return JSONResponse(status_code=404)
+    return CourierItem(courier_id=courier_id, **result)
 
 
 # 3: POST /orders
@@ -85,4 +105,9 @@ def route_post_orders(request_body: OrdersPostRequest):
             orders_good.append(order)
     if orders_bad:
         raise OrdersLoadException(orders_bad)
-    return request_body # FIXME
+    inserted_ids = save_posted_orders(orders_good)
+    details = { "orders": list([{"id": x} for x in inserted_ids]) }
+    return JSONResponse(
+        status_code=201,
+        content=details
+    )

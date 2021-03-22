@@ -42,3 +42,13 @@ class CouriersPostRequest(BaseModel):
     data: List[CourierKindaItem]
     class Config:
         extra = 'forbid'
+
+
+class CourierUpdateRequest(BaseModel):
+    """ Existing courier info model for a modification """
+
+    courier_type: Optional[CourierTypeEnum] = None
+    regions: Optional[List[PositiveInt]] = None
+    working_hours: Optional[List[str]] = None
+    class Config:
+        extra = 'forbid'
