@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 
 from pydantic import ValidationError, PositiveInt
 
+from config import settings
 from exceptions import CouriersLoadException, OrdersLoadException
 from schemas.couriers import CouriersPostRequest, CourierItem, CourierUpdateRequest
 from schemas.orders import OrdersPostRequest, OrderItem
@@ -55,6 +56,12 @@ def orders_load_exception_handler(request, exc: OrdersLoadException):
         status_code=400,
         content=details
     )
+
+
+# FIXME For dev only!!!
+# @app.get("/debug")
+# def route_debug():
+#     return settings
 
 
 # 1: POST /couriers
