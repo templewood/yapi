@@ -1,7 +1,14 @@
+from enum import Enum
 from typing import List, Optional
 from decimal import Decimal
 
 from pydantic import BaseModel, Field, PositiveInt
+
+
+class OrderStatusEnum(str, Enum):
+    pending = 'pending'
+    assigned = 'assigned'
+    completed = 'completed'
 
 
 class OrderKindaItem(BaseModel):
