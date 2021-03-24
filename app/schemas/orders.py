@@ -34,3 +34,9 @@ class OrdersPostRequest(BaseModel):
     data: List[OrderKindaItem]
     class Config:
         extra = 'forbid'
+
+
+class OrdersAssignPostRequest(BaseModel):
+    courier_id: PositiveInt
+    class Config:
+        extra = 'forbid'

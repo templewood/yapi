@@ -7,10 +7,10 @@ from pydantic import ValidationError, PositiveInt
 from config import settings
 from exceptions import CouriersLoadException, OrdersLoadException
 from schemas.couriers import CouriersPostRequest, CourierItem, CourierUpdateRequest
-from schemas.orders import OrdersPostRequest, OrderItem
+from schemas.orders import OrdersPostRequest, OrderItem, OrdersAssignPostRequest
 
 from db.couriers import save_posted_couriers, update_courier
-from db.orders import save_posted_orders
+from db.orders import save_posted_orders, assign_orders
 
 app = FastAPI()
 
@@ -118,3 +118,12 @@ def route_post_orders(request_body: OrdersPostRequest):
         status_code=201,
         content=details
     )
+
+
+# 4: POST /orders/assign
+@app.post("/orders/assign")
+def route_assign_orders(request_body: OrdersAssignPostRequest):
+    result = assign_orders(request_body.courier_id)
+    if not result:
+        return JSONResponse(status_code=400)
+    return result

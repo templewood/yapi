@@ -18,6 +18,15 @@ class CourierTypeEnum(str, Enum):
         }
         return weights[type]
 
+    @classmethod
+    def get_coeff(cls, type):
+        coeffs = {
+            cls.foot : 2,
+            cls.bike : 5,
+            cls.car : 9
+        }
+        return coeffs[type]
+
 
 class CourierKindaItem(BaseModel):
     """ Weak courier item model for a preliminary validation """

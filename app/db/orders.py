@@ -28,3 +28,18 @@ def save_posted_orders(orders: List[OrderItem]):
             connection.execute(tbl_orders.insert(), data_to_db)
             return new_ids
     return []
+
+def assign_orders(courier_id: int):
+    with engine.connect() as connection:
+        s = select(
+            [tbl_couriers]
+        ).where(
+            tbl_couriers.c.courier_id == courier_id
+        )
+        result = connection.execute(s)
+        row = result.fetchone()
+        if row is None:
+            return None
+        courier_info = dict(row)
+        # FIXME add assignment itself (using deliveries, orders and many-to-many relation)
+    return None # FIXME
