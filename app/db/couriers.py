@@ -32,9 +32,31 @@ def save_posted_couriers(couriers: List[CourierItem]):
 
 
 def update_courier(courier_id: int, data):
-    dummy = {
-        "courier_type": "foot",
-        "regions": [11, 33, 2],
-        "working_hours": ["09:00-18:00"]
-    }
-    return dummy
+    with engine.connect() as connection:
+        s = select(
+            [
+                tbl_couriers.c.courier_type,
+                tbl_couriers.c.regions,
+                tbl_couriers.c.working_hours
+            ]
+        ).where(
+            tbl_couriers.c.courier_id == courier_id
+        )
+        result = connection.execute(s)
+        row = result.fetchone()
+
+        if row is None:
+            return None
+
+        courier_info = dict(row)
+
+        if data:
+            for k, v in data.items():
+                courier_info[k] = v
+            connection.execute(
+                tbl_couriers.update().values(**courier_info
+                ).where(
+                    tbl_couriers.c.courier_id == courier_id
+                )
+            )
+    return courier_info

@@ -59,9 +59,9 @@ def orders_load_exception_handler(request, exc: OrdersLoadException):
 
 
 #FIXME For dev only!!!
-@app.get("/debug")
-def route_debug():
-    return settings
+# @app.get("/debug")
+# def route_debug():
+#     return settings
 
 
 # 1: POST /couriers
