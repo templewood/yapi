@@ -51,6 +51,8 @@ def update_courier(courier_id: int, data):
         courier_info = dict(row)
 
         if data:
+            # TODO: remove assigned orders (if any) that got unfit
+            #       upon courier info alteration
             for k, v in data.items():
                 courier_info[k] = v
             connection.execute(
