@@ -6,7 +6,7 @@ from schemas.orders import OrderItem, OrderStatusEnum
 from schemas.couriers import CourierTypeEnum
 from sqlalchemy import select
 from utils.time import can_be_delivered_in_time
-from .schema import tbl_couriers, tbl_orders, tbl_deliveries
+from .schema import tbl_couriers, tbl_orders, tbl_deliveries, tbl_deliveries_orders
 from .db import engine
 
 
@@ -61,7 +61,7 @@ def assign_orders(courier_id: int):
         row = result.fetchone()
         if row:
             # FIXME format!!! Get undeliveried orders !!!
-            return (row['assigned_at'].isoformat() + ".00Z")
+            return (row['assigned_at'].isoformat(sep=' ', timespec='milliseconds')[:-1])
 
         # find kinda suitable orders (pending & properly located & proper item weight)
         t = select(
@@ -79,6 +79,7 @@ def assign_orders(courier_id: int):
         total_weight = Decimal('0.0')
         assign_time = datetime.now()
         for order_row in result:
+            # FIXME replace dummy time with the current one
             # assign_time.strftime('%H:%M')
             if can_be_delivered_in_time('10:00',
                                         courier_info['working_hours'],
@@ -90,6 +91,23 @@ def assign_orders(courier_id: int):
         if not good_order_ids:
             return []
 
-        return good_order_ids # FIXME
-        # FIXME add assignment itself (using deliveries, orders and many-to-many relation)
-    return None # FIXME
+        # mark chosen orders as assigned (and release previously locked orders entries)
+        connection.execute(
+            tbl_orders.update().values(status=OrderStatusEnum.assigned,
+        ).where(tbl_orders.c.order_id.in_(good_order_ids)))
+
+        # create delivery entry
+        result = connection.execute(tbl_deliveries.insert(), [{
+                "courier_id" : courier_info['courier_id'],
+                "assigned_at": assign_time.isoformat(sep=' ', timespec='milliseconds')[:-1],
+                "coeff": CourierTypeEnum.get_coeff(courier_info['courier_type'])
+        }])
+
+        # create many-to-many relation between the created delivery and the assigned orders
+        rows_m2m = [ {  "delivery_id": result.inserted_primary_key[0],
+                        "order_id": i } for i in good_order_ids]
+        connection.execute(tbl_deliveries_orders.insert(), rows_m2m)
+
+        return { "orders": list([{"id": x} for x in good_order_ids]),
+                 "assign_time": assign_time.isoformat(sep=' ', timespec='milliseconds')[:-1] }
+
