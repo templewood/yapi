@@ -1,8 +1,8 @@
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, PositiveInt
-
+from pydantic import BaseModel, PositiveInt, validator
+from utils.time import validate_hours_input
 
 class CourierTypeEnum(str, Enum):
     foot = 'foot'
@@ -59,5 +59,12 @@ class CourierUpdateRequest(BaseModel):
     courier_type: Optional[CourierTypeEnum] = None
     regions: Optional[List[PositiveInt]] = None
     working_hours: Optional[List[str]] = None
+
+    @validator('working_hours')
+    def check_working_hours(cls, v):
+        if v and not validate_hours_input(v):
+            raise ValueError('wrong date format')
+        return v
+
     class Config:
         extra = 'forbid'

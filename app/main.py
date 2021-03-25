@@ -8,7 +8,7 @@ from config import settings
 from exceptions import CouriersLoadException, OrdersLoadException
 from schemas.couriers import CouriersPostRequest, CourierItem, CourierUpdateRequest
 from schemas.orders import OrdersPostRequest, OrderItem, OrdersAssignPostRequest
-
+from utils.time import validate_hours_input
 from db.couriers import save_posted_couriers, update_courier
 from db.orders import save_posted_orders, assign_orders
 
@@ -76,7 +76,10 @@ def route_post_couriers(request_body: CouriersPostRequest):
         except ValidationError as e:
             couriers_bad.append(courier_id)
         else:
-            couriers_good.append(courier)
+            if not validate_hours_input(courier.working_hours):
+                couriers_bad.append(courier_id)
+            else:
+                couriers_good.append(courier)
 
     if couriers_bad:
         raise CouriersLoadException(couriers_bad)
@@ -109,7 +112,10 @@ def route_post_orders(request_body: OrdersPostRequest):
         except ValidationError as e:
             orders_bad.append(order_id)
         else:
-            orders_good.append(order)
+            if not validate_hours_input(order.delivery_hours):
+                orders_bad.append(order_id)
+            else:
+                orders_good.append(order)
     if orders_bad:
         raise OrdersLoadException(orders_bad)
     inserted_ids = save_posted_orders(orders_good)
