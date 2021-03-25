@@ -130,6 +130,6 @@ def route_post_orders(request_body: OrdersPostRequest):
 @app.post("/orders/assign")
 def route_assign_orders(request_body: OrdersAssignPostRequest):
     result = assign_orders(request_body.courier_id)
-    if not result:
+    if result is None:
         return JSONResponse(status_code=400)
     return result
