@@ -53,8 +53,7 @@ tbl_deliveries_orders = Table(
 )
 
 if __name__ == "__main__":
-    from config import Settings
-    settings = Settings(_env_file='../.env')
+    from config import settings
     engine = create_engine(settings.database_url)
     metadata.drop_all(engine)
     metadata.create_all(engine)
