@@ -14,7 +14,7 @@ from schemas.orders import (
     OrdersCompletePostRequest
 )
 from utils.time import validate_hours_input
-from db.couriers import save_posted_couriers, update_courier
+from db.couriers import save_posted_couriers, update_courier, get_courier_info
 from db.orders import save_posted_orders, assign_orders, complete_order
 
 app = FastAPI()
@@ -105,7 +105,8 @@ def route_patch_courier(courier_id: PositiveInt, courier_info: CourierUpdateRequ
     result = update_courier(courier_id, courier_info.dict(exclude_unset=True))
     if not result:
         return JSONResponse(status_code=404)
-    return CourierItem(courier_id=courier_id, **result)
+    return result
+    # return CourierItem(courier_id=courier_id, **result)
 
 
 # 3: POST /orders
@@ -151,3 +152,11 @@ def route_complete_order(request_body: OrdersCompletePostRequest):
         return JSONResponse(status_code=400)
     return {"order_id": order_id}
 
+
+# 6: GET /couriers/$courier_id
+@app.get("/couriers/{courier_id}")
+def route_get_courier(courier_id: PositiveInt):
+    result = get_courier_info(courier_id)
+    if not result:
+        return JSONResponse(status_code=404)
+    return result

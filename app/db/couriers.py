@@ -1,7 +1,12 @@
 from typing import List
-from schemas.couriers import CourierItem
+from datetime import datetime
+from decimal import Decimal
+
+from schemas.couriers import CourierItem, CourierTypeEnum
+from schemas.orders import OrderStatusEnum
 from sqlalchemy import select
-from .schema import tbl_couriers, tbl_orders
+from utils.time import can_be_delivered_in_time
+from .schema import tbl_couriers, tbl_orders, tbl_deliveries, tbl_deliveries_orders
 from .db import engine
 
 
@@ -51,8 +56,6 @@ def update_courier(courier_id: int, data):
         courier_info = dict(row)
 
         if data:
-            # TODO: remove assigned orders (if any) that got unfit
-            #       upon courier info alteration
             for k, v in data.items():
                 courier_info[k] = v
             connection.execute(
@@ -61,4 +64,89 @@ def update_courier(courier_id: int, data):
                     tbl_couriers.c.courier_id == courier_id
                 )
             )
+
+            # TODO: remove assigned orders (if any) that got unfit
+            #       upon courier info alteration
+
+            # check if the uncompleted delivery exists for the courier
+            ds = select(
+                [tbl_deliveries]
+            ).where(
+                (tbl_deliveries.c.courier_id == courier_id) &
+                (tbl_deliveries.c.status == OrderStatusEnum.assigned)
+            )
+            result = connection.execute(ds)
+            row = result.fetchone()
+
+            # if the uncompleted delivery exists, return all assigned, but not completed orders
+            if row:
+                delivery_id = row['delivery_id']
+                us = select(
+                    [tbl_orders]
+                ).where(
+                    (tbl_orders.c.status == OrderStatusEnum.assigned) &
+                    (tbl_deliveries.c.delivery_id == delivery_id) &
+                    (tbl_orders.c.order_id == tbl_deliveries_orders.c.order_id) &
+                    (tbl_deliveries.c.delivery_id == tbl_deliveries_orders.c.delivery_id)
+                ).order_by(tbl_orders.c.weight)
+                result = connection.execute(us)
+                rows = result.fetchall()
+                if rows:
+                    orders_good = []
+                    orders_bad = []
+                    total_weight = Decimal('0.0')
+                    assign_time = datetime.now()
+                    for order in rows:
+                        if order['region'] not in courier_info['regions']:
+                            orders_bad.append(order)
+                        elif order['weight'] > CourierTypeEnum.max_weight(courier_info['courier_type']):
+                            orders_bad.append(order)
+                        # FIXME replace dummy time with the current one
+                        # assign_time.strftime('%H:%M')
+                        elif not can_be_delivered_in_time('10:00',
+                            courier_info['working_hours'], order['delivery_hours']):
+                            orders_bad.append(order)
+                        elif total_weight + order['weight'] > CourierTypeEnum.max_weight(courier_info['courier_type']):
+                            orders_bad.append(order)
+                        else:
+                            orders_good.append(order)
+
+                    # release unfit orders
+                    if orders_bad:
+                        bad_ids = [e['order_id'] for e in orders_bad]
+                        connection.execute(
+                            tbl_orders.update().values(
+                                status=OrderStatusEnum.pending,
+                                completed_at=None
+                            ).where(tbl_orders.c.order_id.in_(bad_ids))
+                        )
+                        connection.execute(
+                            tbl_deliveries_orders.delete(
+                            ).where(
+                                (tbl_deliveries_orders.c.order_id.in_(bad_ids)) &
+                                (tbl_deliveries_orders.c.delivery_id == delivery_id)
+                            )
+                        )
+                        # TODO FIXME
+                        # check if the delivery empty (both assigned and completed orders are absent)
+                        # and delete it
+                        return bad_ids, orders_good
+
+
     return courier_info
+
+
+def get_courier_info(courier_id: int):
+    # FIXME calculate income based on completed deliveries
+    with engine.connect() as connection:
+        s = select(
+            [tbl_couriers]
+        ).where(
+            tbl_couriers.c.courier_id == courier_id
+        )
+        result = connection.execute(s)
+        row = result.fetchone()
+        if row is None:
+            return None
+        courier_info = dict(row)
+        return courier_info
