@@ -58,11 +58,23 @@ def validate_hours_input(wh: List[str]):
     return True
 
 
-if __name__ == "__main__":
-    assign_time = datetime.now()
-    current_time = assign_time.strftime('%H:%M')
-    courier_hours = ["11:35-14:08", "09:00-11:05"]
-    delivery_hours = ["14:05-14:35", "11:00-11:35"]
+def validate_iso_time(s: str):
+    p = re.compile(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{2}Z$')
+    if not p.match(s):
+        return False
+    try:
+        tmp = datetime.strptime(s, "%Y-%m-%dT%H:%M:%S.%fZ")
+    except ValueError:
+        return False
+    return True
 
-    current_time = '16:08'
-    print(can_be_delivered_in_time(current_time, courier_hours, delivery_hours))
+
+if __name__ == "__main__":
+    # assign_time = datetime.now()
+    # current_time = assign_time.strftime('%H:%M')
+    # courier_hours = ["11:35-14:08", "09:00-11:05"]
+    # delivery_hours = ["14:05-14:35", "11:00-11:35"]
+
+    # current_time = '16:08'
+    # print(can_be_delivered_in_time(current_time, courier_hours, delivery_hours))
+    pass

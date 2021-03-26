@@ -50,7 +50,7 @@ def assign_orders(courier_id: int):
             return None
         courier_info = dict(row)
 
-        # check if an uncompleted delivery exists for the courier
+        # check if the uncompleted delivery exists for the courier
         ds = select(
             [tbl_deliveries]
         ).where(
@@ -59,9 +59,21 @@ def assign_orders(courier_id: int):
         )
         result = connection.execute(ds)
         row = result.fetchone()
+
+        # if the uncompleted delivery exists, return all assigned, but not completed order ids
         if row:
-            # FIXME format!!! Get undeliveried orders !!!
-            return (row['assigned_at'].isoformat(sep=' ', timespec='milliseconds')[:-1])
+            us = select(
+                [tbl_orders.c.order_id]
+            ).where(
+                (tbl_orders.c.status == OrderStatusEnum.assigned) &
+                (tbl_deliveries.c.delivery_id == row['delivery_id']) &
+                (tbl_orders.c.order_id == tbl_deliveries_orders.c.order_id) &
+                (tbl_deliveries.c.delivery_id == tbl_deliveries_orders.c.delivery_id)
+            )
+            result = connection.execute(us)
+            rows = [e['order_id'] for e in result.fetchall()]
+            return { "orders": list([{"id": x} for x in rows]),
+                 "assign_time": row['assigned_at'].isoformat(sep=' ', timespec='milliseconds')[:-1] }
 
         # find kinda suitable orders (pending & properly located & proper item weight)
         t = select(
@@ -94,7 +106,8 @@ def assign_orders(courier_id: int):
         # mark chosen orders as assigned (and release previously locked orders entries)
         connection.execute(
             tbl_orders.update().values(status=OrderStatusEnum.assigned,
-        ).where(tbl_orders.c.order_id.in_(good_order_ids)))
+            ).where(tbl_orders.c.order_id.in_(good_order_ids))
+        )
 
         # create delivery entry
         result = connection.execute(tbl_deliveries.insert(), [{
@@ -111,3 +124,56 @@ def assign_orders(courier_id: int):
         return { "orders": list([{"id": x} for x in good_order_ids]),
                  "assign_time": assign_time.isoformat(sep=' ', timespec='milliseconds')[:-1] }
 
+
+def complete_order(courier_id: int, order_id: int, complete_time: str):
+    with engine.connect() as connection:
+        s = select(
+            [tbl_orders.c.order_id, tbl_orders.c.status, tbl_deliveries.c.delivery_id]
+        ).where(
+            (tbl_orders.c.order_id == order_id) &
+            (tbl_deliveries.c.courier_id == courier_id) &
+            (tbl_orders.c.order_id == tbl_deliveries_orders.c.order_id) &
+            (tbl_deliveries.c.delivery_id == tbl_deliveries_orders.c.delivery_id)
+        )
+        result = connection.execute(s)
+        row = result.fetchone()
+
+        # nonexistent / unassigned / belonging to another courier's delivery
+        if row is None:
+            return None
+
+        # already completed order
+        if row['status'] == OrderStatusEnum.completed:
+            return order_id
+
+        # mark the order as completed
+        delivery_id = row['delivery_id']
+        complete_time = datetime.strptime(complete_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+        connection.execute(
+            tbl_orders.update().values(
+                status=OrderStatusEnum.completed,
+                completed_at=complete_time.isoformat(sep=' ', timespec='milliseconds')[:-1]
+            ).where(tbl_orders.c.order_id == order_id)
+        )
+
+        # check if it was the last completed order in the current delivery
+        t = select(
+            [tbl_orders.c.order_id]
+        ).where(
+            (tbl_orders.c.status == OrderStatusEnum.assigned) &
+            (tbl_deliveries.c.delivery_id == delivery_id) &
+            (tbl_orders.c.order_id == tbl_deliveries_orders.c.order_id) &
+            (tbl_deliveries.c.delivery_id == tbl_deliveries_orders.c.delivery_id)
+        )
+        result = connection.execute(t)
+        rows = result.fetchall()
+
+        # All orders in the current delivery have been completed
+        # Finalize the current delivery
+        if not rows:
+            connection.execute(
+                tbl_deliveries.update().values(
+                    status=OrderStatusEnum.completed
+                ).where(tbl_deliveries.c.delivery_id == delivery_id)
+            )
+    return order_id

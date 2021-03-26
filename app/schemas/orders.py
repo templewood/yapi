@@ -2,8 +2,9 @@ from enum import Enum
 from typing import List, Optional
 from decimal import Decimal
 
-from pydantic import BaseModel, Field, PositiveInt
+from pydantic import BaseModel, Field, PositiveInt, validator
 
+from utils.time import validate_iso_time
 
 class OrderStatusEnum(str, Enum):
     pending = 'pending'
@@ -38,5 +39,20 @@ class OrdersPostRequest(BaseModel):
 
 class OrdersAssignPostRequest(BaseModel):
     courier_id: PositiveInt
+    class Config:
+        extra = 'forbid'
+
+
+class OrdersCompletePostRequest(BaseModel):
+    courier_id: PositiveInt
+    order_id: PositiveInt
+    complete_time: str
+
+    @validator('complete_time')
+    def check_complete_time(cls, v):
+        if not validate_iso_time(v):
+            raise ValueError('wrong complete_time format')
+        return v
+
     class Config:
         extra = 'forbid'

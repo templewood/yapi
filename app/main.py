@@ -7,10 +7,15 @@ from pydantic import ValidationError, PositiveInt
 from config import settings
 from exceptions import CouriersLoadException, OrdersLoadException
 from schemas.couriers import CouriersPostRequest, CourierItem, CourierUpdateRequest
-from schemas.orders import OrdersPostRequest, OrderItem, OrdersAssignPostRequest
+from schemas.orders import (
+    OrdersPostRequest,
+    OrderItem,
+    OrdersAssignPostRequest,
+    OrdersCompletePostRequest
+)
 from utils.time import validate_hours_input
 from db.couriers import save_posted_couriers, update_courier
-from db.orders import save_posted_orders, assign_orders
+from db.orders import save_posted_orders, assign_orders, complete_order
 
 app = FastAPI()
 
@@ -23,6 +28,9 @@ async def validation_exception_handler(request, exc):
             details = { "validation_error": {
                 "couriers": []
             } }
+    elif request.url.path.startswith('/orders/complete'
+        ) or request.url.path.startswith('/orders/assign'):
+        pass
     elif request.url.path.startswith('/orders'):
         if request.method == 'POST':
             details = { "validation_error": {
@@ -133,3 +141,13 @@ def route_assign_orders(request_body: OrdersAssignPostRequest):
     if result is None:
         return JSONResponse(status_code=400)
     return result
+
+
+# 5: POST /orders/complete
+@app.post("/orders/complete")
+def route_complete_order(request_body: OrdersCompletePostRequest):
+    order_id = complete_order(**request_body.dict())
+    if not order_id:
+        return JSONResponse(status_code=400)
+    return {"order_id": order_id}
+
