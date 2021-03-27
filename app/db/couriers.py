@@ -5,6 +5,7 @@ from decimal import Decimal
 from schemas.couriers import CourierItem, CourierTypeEnum
 from schemas.orders import OrderStatusEnum
 from sqlalchemy import select
+from sqlalchemy.sql import func
 from utils.time import can_be_delivered_in_time
 from .schema import tbl_couriers, tbl_orders, tbl_deliveries, tbl_deliveries_orders
 from .db import engine
@@ -130,9 +131,20 @@ def update_courier(courier_id: int, data):
                         # TODO FIXME
                         # check if the delivery empty (both assigned and completed orders are absent)
                         # and delete it
-                        return bad_ids, orders_good
-
-
+                        eds = select(
+                            [tbl_deliveries_orders]
+                        ).where(
+                            tbl_deliveries_orders.c.delivery_id == delivery_id
+                        )
+                        result = connection.execute(eds)
+                        rows = result.fetchall()
+                        if not rows:
+                            connection.execute(
+                                tbl_deliveries.delete(
+                                ).where(
+                                    tbl_deliveries.c.delivery_id == delivery_id
+                                )
+                            )
     return courier_info
 
 
@@ -149,4 +161,16 @@ def get_courier_info(courier_id: int):
         if row is None:
             return None
         courier_info = dict(row)
+
+        result = connection.execute(
+            select(
+                func.sum(tbl_deliveries.c.coeff)
+            ).where(
+                (tbl_deliveries.c.courier_id == courier_id) &
+                (tbl_deliveries.c.status == OrderStatusEnum.completed)
+            )
+        ).scalar()
+        courier_info['earnings'] = 0
+        if result:
+            courier_info['earnings'] = result * 500
         return courier_info
