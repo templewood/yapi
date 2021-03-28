@@ -73,7 +73,7 @@ def assign_orders(courier_id: int):
             result = connection.execute(us)
             rows = [e['order_id'] for e in result.fetchall()]
             return { "orders": list([{"id": x} for x in rows]),
-                 "assign_time": row['assigned_at'].isoformat(sep=' ', timespec='milliseconds')[:-1] }
+                 "assign_time": row['assigned_at'].isoformat(timespec='milliseconds')[:-1] + 'Z' }
 
         # find kinda suitable orders (pending & properly located & proper item weight)
         t = select(
@@ -119,8 +119,8 @@ def assign_orders(courier_id: int):
                         "order_id": i } for i in good_order_ids]
         connection.execute(tbl_deliveries_orders.insert(), rows_m2m)
 
-        return { "orders": list([{"id": x} for x in good_order_ids]),
-                 "assign_time": assign_time.isoformat(sep=' ', timespec='milliseconds')[:-1] }
+        return { "orders": list([{"id": x} for x in sorted(good_order_ids)]),
+                 "assign_time": assign_time.isoformat(timespec='milliseconds')[:-1] + 'Z' }
 
 
 def complete_order(courier_id: int, order_id: int, complete_time: str):

@@ -138,6 +138,8 @@ def route_assign_orders(request_body: OrdersAssignPostRequest):
     result = assign_orders(request_body.courier_id)
     if result is None:
         return JSONResponse(status_code=400)
+    elif not result:
+        return {"orders": []}
     return result
 
 
