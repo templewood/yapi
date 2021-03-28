@@ -91,9 +91,7 @@ def assign_orders(courier_id: int):
         total_weight = Decimal('0.0')
         assign_time = datetime.now()
         for order_row in result:
-            # FIXME replace dummy time with the current one
-            # assign_time.strftime('%H:%M')
-            if can_be_delivered_in_time('10:00',
+            if can_be_delivered_in_time(assign_time.strftime('%H:%M'),
                                         courier_info['working_hours'],
                                         order_row['delivery_hours']):
                 if total_weight + order_row['weight'] > CourierTypeEnum.max_weight(courier_info['courier_type']):

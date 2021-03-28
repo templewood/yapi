@@ -102,9 +102,7 @@ def update_courier(courier_id: int, data):
                             orders_bad.append(order)
                         elif order['weight'] > CourierTypeEnum.max_weight(courier_info['courier_type']):
                             orders_bad.append(order)
-                        # FIXME replace dummy time with the current one
-                        # assign_time.strftime('%H:%M')
-                        elif not can_be_delivered_in_time('10:00',
+                        elif not can_be_delivered_in_time(assign_time.strftime('%H:%M'),
                             courier_info['working_hours'], order['delivery_hours']):
                             orders_bad.append(order)
                         elif total_weight + order['weight'] > CourierTypeEnum.max_weight(courier_info['courier_type']):
@@ -128,7 +126,7 @@ def update_courier(courier_id: int, data):
                                 (tbl_deliveries_orders.c.delivery_id == delivery_id)
                             )
                         )
-                        # TODO FIXME
+
                         # check if the delivery empty (both assigned and completed orders are absent)
                         # and delete it
                         eds = select(
@@ -149,7 +147,6 @@ def update_courier(courier_id: int, data):
 
 
 def get_courier_info(courier_id: int):
-    # FIXME calculate income based on completed deliveries
     with engine.connect() as connection:
         s = select(
             [tbl_couriers]
@@ -162,6 +159,7 @@ def get_courier_info(courier_id: int):
             return None
         courier_info = dict(row)
 
+        # calculate earnings based on completed deliveries
         result = connection.execute(
             select(
                 func.sum(tbl_deliveries.c.coeff)
