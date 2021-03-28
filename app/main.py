@@ -114,8 +114,8 @@ def route_patch_courier(courier_id: PositiveInt, courier_info: CourierUpdateRequ
 # 3: POST /orders
 @app.post("/orders")
 def route_post_orders(request_body: OrdersPostRequest):
-    # if not request_body.data:
-    #     raise OrdersLoadException([])
+    if not request_body.data:
+        raise OrdersLoadException([])
     orders_good = []
     orders_bad = []
     for kinda_order in request_body.data:
