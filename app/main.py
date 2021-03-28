@@ -107,8 +107,7 @@ def route_patch_courier(courier_id: PositiveInt, courier_info: CourierUpdateRequ
     result = update_courier(courier_id, courier_info.dict(exclude_unset=True))
     if not result:
         return JSONResponse(status_code=404)
-    return result
-    # return CourierItem(courier_id=courier_id, **result)
+    return CourierItem(courier_id=courier_id, **result)
 
 
 # 3: POST /orders
