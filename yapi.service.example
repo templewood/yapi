@@ -1,0 +1,15 @@
+[Unit]
+Description = Yapi
+After=Network.target
+
+[Service]
+User = <user>
+Group = <group>
+WorkingDirectory = <project folder>/app
+ExecStart = <project folder>/.venv/bin/uvicorn --host 0.0.0.0 --port 8080 main:app
+ExecReload = /bin/kill -s HUP $MAINPID
+ExecStop = /bin/kill -s TERM $MAINPID
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
