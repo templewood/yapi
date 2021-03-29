@@ -6,7 +6,11 @@ from pydantic import ValidationError, PositiveInt
 
 from config import settings
 from exceptions import CouriersLoadException, OrdersLoadException
-from schemas.couriers import CouriersPostRequest, CourierItem, CourierUpdateRequest
+from schemas.couriers import (
+    CouriersPostRequest,
+    CourierItem,
+    CourierUpdateRequest
+)
 from schemas.orders import (
     OrdersPostRequest,
     OrderItem,
@@ -25,17 +29,18 @@ async def validation_exception_handler(request, exc):
     details = ''
     if request.url.path.startswith('/couriers'):
         if request.method == 'POST':
-            details = { "validation_error": {
+            details = {"validation_error": {
                 "couriers": []
-            } }
-    elif request.url.path.startswith('/orders/complete'
-        ) or request.url.path.startswith('/orders/assign'):
+            }}
+    elif request.url.path.startswith(
+            '/orders/complete') or request.url.path.startswith(
+            '/orders/assign'):
         pass
     elif request.url.path.startswith('/orders'):
         if request.method == 'POST':
-            details = { "validation_error": {
+            details = {"validation_error": {
                 "orders": []
-            } }
+            }}
     return JSONResponse(
         status_code=400,
         content=details
@@ -45,9 +50,9 @@ async def validation_exception_handler(request, exc):
 @app.exception_handler(CouriersLoadException)
 def couriers_load_exception_handler(request, exc: CouriersLoadException):
     ids = list([{"id": x} for x in exc.ids])
-    details = { "validation_error": {
+    details = {"validation_error": {
         "couriers": ids
-    } }
+    }}
     return JSONResponse(
         status_code=400,
         content=details
@@ -57,9 +62,9 @@ def couriers_load_exception_handler(request, exc: CouriersLoadException):
 @app.exception_handler(OrdersLoadException)
 def orders_load_exception_handler(request, exc: OrdersLoadException):
     ids = list([{"id": x} for x in exc.ids])
-    details = { "validation_error": {
+    details = {"validation_error": {
         "orders": ids
-    } }
+    }}
     return JSONResponse(
         status_code=400,
         content=details
@@ -88,7 +93,7 @@ def route_post_couriers(request_body: CouriersPostRequest):
     if couriers_bad:
         raise CouriersLoadException(couriers_bad)
     inserted_ids = save_posted_couriers(couriers_good)
-    details = { "couriers": list([{"id": x} for x in inserted_ids]) }
+    details = {"couriers": list([{"id": x} for x in inserted_ids])}
     return JSONResponse(
         status_code=201,
         content=details
@@ -97,7 +102,10 @@ def route_post_couriers(request_body: CouriersPostRequest):
 
 # 2: PATCH /couriers/$courier_id
 @app.patch("/couriers/{courier_id}")
-def route_patch_courier(courier_id: PositiveInt, courier_info: CourierUpdateRequest):
+def route_patch_courier(
+    courier_id: PositiveInt,
+    courier_info: CourierUpdateRequest
+):
     result = update_courier(courier_id, courier_info.dict(exclude_unset=True))
     if not result:
         return JSONResponse(status_code=404)
@@ -125,7 +133,7 @@ def route_post_orders(request_body: OrdersPostRequest):
     if orders_bad:
         raise OrdersLoadException(orders_bad)
     inserted_ids = save_posted_orders(orders_good)
-    details = { "orders": list([{"id": x} for x in inserted_ids]) }
+    details = {"orders": list([{"id": x} for x in inserted_ids])}
     return JSONResponse(
         status_code=201,
         content=details

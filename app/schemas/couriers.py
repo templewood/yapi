@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel, PositiveInt, validator
 from utils.time import validate_hours_input
 
+
 class CourierTypeEnum(str, Enum):
     foot = 'foot'
     bike = 'bike'
@@ -12,18 +13,18 @@ class CourierTypeEnum(str, Enum):
     @classmethod
     def max_weight(cls, type):
         weights = {
-            cls.foot : 10,
-            cls.bike : 15,
-            cls.car : 50
+            cls.foot: 10,
+            cls.bike: 15,
+            cls.car: 50
         }
         return weights[type]
 
     @classmethod
     def get_coeff(cls, type):
         coeffs = {
-            cls.foot : 2,
-            cls.bike : 5,
-            cls.car : 9
+            cls.foot: 2,
+            cls.bike: 5,
+            cls.car: 9
         }
         return coeffs[type]
 
@@ -32,6 +33,7 @@ class CourierKindaItem(BaseModel):
     """ Weak courier item model for a preliminary validation """
 
     courier_id: int
+
     class Config:
         extra = 'allow'
 
@@ -43,12 +45,14 @@ class CourierItem(BaseModel):
     courier_type: CourierTypeEnum
     regions: List[PositiveInt]
     working_hours: List[str]
+
     class Config:
         extra = 'forbid'
 
 
 class CouriersPostRequest(BaseModel):
     data: List[CourierKindaItem]
+
     class Config:
         extra = 'forbid'
 

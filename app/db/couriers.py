@@ -7,7 +7,12 @@ from schemas.orders import OrderStatusEnum
 from sqlalchemy import select
 from sqlalchemy.sql import func
 from utils.time import can_be_delivered_in_time
-from .schema import tbl_couriers, tbl_orders, tbl_deliveries, tbl_deliveries_orders
+from .schema import (
+    tbl_couriers,
+    tbl_orders,
+    tbl_deliveries,
+    tbl_deliveries_orders
+)
 from .db import engine
 
 
@@ -60,8 +65,7 @@ def update_courier(courier_id: int, data):
             for k, v in data.items():
                 courier_info[k] = v
             connection.execute(
-                tbl_couriers.update().values(**courier_info
-                ).where(
+                tbl_couriers.update().values(**courier_info).where(
                     tbl_couriers.c.courier_id == courier_id
                 )
             )
@@ -79,7 +83,8 @@ def update_courier(courier_id: int, data):
             result = connection.execute(ds)
             row = result.fetchone()
 
-            # if the uncompleted delivery exists, return all assigned, but not completed orders
+            # if the uncompleted delivery exists, return all assigned,
+            # but not completed orders
             if row:
                 delivery_id = row['delivery_id']
                 us = select(
@@ -127,8 +132,8 @@ def update_courier(courier_id: int, data):
                             )
                         )
 
-                        # check if the delivery empty (both assigned and completed orders are absent)
-                        # and delete it
+                        # check if the delivery empty (both assigned and
+                        # completed orders are absent) and delete it
                         eds = select(
                             [tbl_deliveries_orders]
                         ).where(

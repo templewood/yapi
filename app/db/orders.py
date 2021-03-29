@@ -6,7 +6,12 @@ from schemas.orders import OrderItem, OrderStatusEnum
 from schemas.couriers import CourierTypeEnum
 from sqlalchemy import select
 from utils.time import can_be_delivered_in_time
-from .schema import tbl_couriers, tbl_orders, tbl_deliveries, tbl_deliveries_orders
+from .schema import (
+    tbl_couriers,
+    tbl_orders,
+    tbl_deliveries,
+    tbl_deliveries_orders
+)
 from .db import engine
 
 
@@ -60,7 +65,8 @@ def assign_orders(courier_id: int):
         result = connection.execute(ds)
         row = result.fetchone()
 
-        # if the uncompleted delivery exists, return all assigned, but not completed order ids
+        # if the uncompleted delivery exists, return all assigned,
+        #  but not completed order ids
         if row:
             us = select(
                 [tbl_orders.c.order_id]
@@ -72,18 +78,18 @@ def assign_orders(courier_id: int):
             )
             result = connection.execute(us)
             rows = [e['order_id'] for e in result.fetchall()]
-            return { "orders": list([{"id": x} for x in rows]),
-                 "assign_time": row['assigned_at'].isoformat(timespec='milliseconds')[:-1] + 'Z' }
+            return {"orders": list([{"id": x} for x in sorted(rows)]),
+                "assign_time": row['assigned_at'].isoformat(timespec='milliseconds')[:-1] + 'Z'}
 
-        # find kinda suitable orders (pending & properly located & proper item weight)
+        # find kinda suitable orders,
+        # i.e. pending & properly located & proper item weight
         t = select(
             [tbl_orders]
         ).where(
             (tbl_orders.c.status == OrderStatusEnum.pending) &
             (tbl_orders.c.region.in_(courier_info['regions'])) &
             (tbl_orders.c.weight <= CourierTypeEnum.max_weight(courier_info['courier_type']))
-        ).order_by(tbl_orders.c.weight
-        ).with_for_update()
+        ).order_by(tbl_orders.c.weight).with_for_update()
         result = connection.execute(t)
 
         # select fully suitable orders (right scheduled & proper total weight)
@@ -101,7 +107,8 @@ def assign_orders(courier_id: int):
         if not good_order_ids:
             return []
 
-        # mark chosen orders as assigned (and release previously locked orders entries)
+        # mark chosen orders as assigned (and release previously locked
+        # orders entries)
         connection.execute(
             tbl_orders.update().values(status=OrderStatusEnum.assigned,
             ).where(tbl_orders.c.order_id.in_(good_order_ids))
@@ -109,24 +116,29 @@ def assign_orders(courier_id: int):
 
         # create delivery entry
         result = connection.execute(tbl_deliveries.insert(), [{
-                "courier_id" : courier_info['courier_id'],
+                "courier_id": courier_info['courier_id'],
                 "assigned_at": assign_time.isoformat(sep=' ', timespec='milliseconds')[:-1],
                 "coeff": CourierTypeEnum.get_coeff(courier_info['courier_type'])
         }])
 
-        # create many-to-many relation between the created delivery and the assigned orders
-        rows_m2m = [ {  "delivery_id": result.inserted_primary_key[0],
-                        "order_id": i } for i in good_order_ids]
+        # create many-to-many relation between the created delivery and
+        # the assigned orders
+        rows_m2m = [{"delivery_id": result.inserted_primary_key[0],
+                    "order_id": i} for i in good_order_ids]
         connection.execute(tbl_deliveries_orders.insert(), rows_m2m)
 
-        return { "orders": list([{"id": x} for x in sorted(good_order_ids)]),
-                 "assign_time": assign_time.isoformat(timespec='milliseconds')[:-1] + 'Z' }
+        return {"orders": list([{"id": x} for x in sorted(good_order_ids)]),
+                "assign_time": assign_time.isoformat(timespec='milliseconds')[:-1] + 'Z'}
 
 
 def complete_order(courier_id: int, order_id: int, complete_time: str):
     with engine.connect() as connection:
         s = select(
-            [tbl_orders.c.order_id, tbl_orders.c.status, tbl_deliveries.c.delivery_id]
+            [
+                tbl_orders.c.order_id,
+                tbl_orders.c.status,
+                tbl_deliveries.c.delivery_id
+            ]
         ).where(
             (tbl_orders.c.order_id == order_id) &
             (tbl_deliveries.c.courier_id == courier_id) &

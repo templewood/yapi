@@ -46,9 +46,8 @@ tbl_deliveries = Table(
 tbl_deliveries_orders = Table(
     "deliveries_orders",
     metadata,
-    Column("delivery_id", Integer,
-        ForeignKey('deliveries.delivery_id', ondelete="CASCADE"), nullable=False
-    ),
+    Column("delivery_id", Integer, ForeignKey('deliveries.delivery_id',
+        ondelete="CASCADE"), nullable=False),
     Column("order_id", BigInteger, nullable=False),
 )
 
