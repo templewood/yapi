@@ -19,6 +19,7 @@ def clean_db():
     metadata.create_all(engine)
     yield
     metadata.drop_all(engine)
+    metadata.create_all(engine)
 
 
 def test_not_found_request_nonexistent_courier():

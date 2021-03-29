@@ -21,6 +21,7 @@ def clean_db():
     metadata.create_all(engine)
     yield
     metadata.drop_all(engine)
+    metadata.create_all(engine)
 
 
 def test_post_couriers_good():
